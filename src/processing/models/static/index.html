@@ -1,40 +1,170 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>OpenCV+Rust Object Detection</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenCV + Rust Object Detection</title>
     <style>
-        #video-container { width: 640px; margin: 0 auto; }
-        #results { margin-top: 20px; }
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .upload-section {
+            border: 2px dashed #ccc;
+            padding: 20px;
+            text-align: center;
+            border-radius: 5px;
+        }
+        #video-preview {
+            width: 100%;
+            max-height: 400px;
+            background-color: #000;
+        }
+        #results {
+            margin-top: 20px;
+        }
+        .progress-container {
+            margin-top: 10px;
+            display: none;
+        }
+        progress {
+            width: 100%;
+        }
     </style>
 </head>
 <body>
-    <div id="video-container">
+    <div class="container">
         <h1>Video Object Detection</h1>
-        <input type="file" id="video-upload" accept="video/*">
-        <button id="process-btn">Process Video</button>
+        
+        <div class="upload-section">
+            <input type="file" id="video-input" accept="video/*" style="display: none;">
+            <button id="select-btn">Select Video File</button>
+            <p>or drag and drop video here</p>
+            
+            <video id="video-preview" controls></video>
+            
+            <div class="progress-container" id="progress-container">
+                <p>Processing video...</p>
+                <progress id="progress-bar" value="0" max="100"></progress>
+                <p id="status-text"></p>
+            </div>
+            
+            <button id="process-btn" disabled>Process Video</button>
+        </div>
+        
         <div id="results">
-            <video id="output-video" controls></video>
+            <h2>Results</h2>
+            <video id="output-video" controls style="width: 100%;"></video>
         </div>
     </div>
 
     <script>
-        document.getElementById('process-btn').addEventListener('click', async () => {
-            const fileInput = document.getElementById('video-upload');
-            if (fileInput.files.length === 0) return;
+        const selectBtn = document.getElementById('select-btn');
+        const videoInput = document.getElementById('video-input');
+        const videoPreview = document.getElementById('video-preview');
+        const processBtn = document.getElementById('process-btn');
+        const progressContainer = document.getElementById('progress-container');
+        const progressBar = document.getElementById('progress-bar');
+        const statusText = document.getElementById('status-text');
+        const outputVideo = document.getElementById('output-video');
+
+        // Handle file selection
+        selectBtn.addEventListener('click', () => videoInput.click());
+        
+        videoInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                const file = e.target.files[0];
+                previewVideo(file);
+            }
+        });
+
+        // Handle drag and drop
+        document.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            document.querySelector('.upload-section').style.borderColor = '#666';
+        });
+
+        document.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            document.querySelector('.upload-section').style.borderColor = '#ccc';
+        });
+
+        document.addEventListener('drop', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            document.querySelector('.upload-section').style.borderColor = '#ccc';
             
+            if (e.dataTransfer.files.length > 0) {
+                const file = e.dataTransfer.files[0];
+                if (file.type.startsWith('video/')) {
+                    previewVideo(file);
+                    videoInput.files = e.dataTransfer.files;
+                }
+            }
+        });
+
+        function previewVideo(file) {
+            if (!file.type.startsWith('video/')) {
+                alert('Please select a video file');
+                return;
+            }
+
+            const videoURL = URL.createObjectURL(file);
+            videoPreview.src = videoURL;
+            processBtn.disabled = false;
+        }
+
+        // Process video
+        processBtn.addEventListener('click', async () => {
+            const file = videoInput.files[0];
+            if (!file) return;
+
+            progressContainer.style.display = 'block';
+            processBtn.disabled = true;
+
             const formData = new FormData();
-            formData.append('video', fileInput.files[0]);
-            
-            const response = await fetch('/upload', {
-                method: 'POST',
-                body: formData
-            });
-            
-            const result = await response.json();
-            console.log(result);
-            
-            // In a real app, you'd poll for results or use WebSockets
-            document.getElementById('output-video').src = "/processed/your_video.mp4";
+            formData.append('video', file);
+
+            try {
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    throw new Error('Upload failed');
+                }
+
+                // Poll for results (simplified - in real app use WebSockets)
+                statusText.textContent = 'Processing video...';
+                
+                // Simulate progress updates
+                let progress = 0;
+                const interval = setInterval(() => {
+                    progress += 5;
+                    progressBar.value = progress;
+                    statusText.textContent = `Processing... ${progress}%`;
+                    
+                    if (progress >= 100) {
+                        clearInterval(interval);
+                        statusText.textContent = 'Processing complete!';
+                        outputVideo.src = '/processed/output.mp4';
+                    }
+                }, 500);
+
+            } catch (error) {
+                console.error('Error:', error);
+                statusText.textContent = 'Error processing video';
+            }
         });
     </script>
 </body>
