@@ -1,25 +1,27 @@
-FROM python:3.9-slim
+FROM rust:1.60 as builder
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    build-essential \
-    cmake \
-    libopencv-dev \
-    && rm -rf /var/lib/apt/lists/*
-
-WORKDIR /app
+WORKDIR /usr/src/app
 COPY . .
 
-# Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+RUN apt-get update && \
+    apt-get install -y cmake libclang-dev clang pkg-config libopencv-dev && \
+    rm -rf /var/lib/apt/lists/*
 
-# Install Rust
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-ENV PATH="/root/.cargo/bin:${PATH}"
+RUN cargo install --path .
 
-# Build Rust extension
-RUN python setup.py install
+FROM debian:bullseye-slim
 
-EXPOSE 8501
+RUN apt-get update && \
+    apt-get install -y libopencv-dev && \
+    rm -rf /var/lib/apt/lists/*
 
-CMD ["streamlit", "run", "app.py", "--server.port=8501", "--server.address=0.0.0.0"]
+COPY --from=builder /usr/local/cargo/bin/opencv-rust-detection /usr/local/bin/opencv-rust-detection
+COPY models /app/models
+COPY static /app/static
+
+WORKDIR /app
+ENV RUST_LOG=info
+
+EXPOSE 8080
+
+CMD ["opencv-rust-detection", "--web"]
