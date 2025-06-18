@@ -1,1 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>OpenCV+Rust Object Detection</title>
+    <style>
+        #video-container { width: 640px; margin: 0 auto; }
+        #results { margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div id="video-container">
+        <h1>Video Object Detection</h1>
+        <input type="file" id="video-upload" accept="video/*">
+        <button id="process-btn">Process Video</button>
+        <div id="results">
+            <video id="output-video" controls></video>
+        </div>
+    </div>
 
+    <script>
+        document.getElementById('process-btn').addEventListener('click', async () => {
+            const fileInput = document.getElementById('video-upload');
+            if (fileInput.files.length === 0) return;
+            
+            const formData = new FormData();
+            formData.append('video', fileInput.files[0]);
+            
+            const response = await fetch('/upload', {
+                method: 'POST',
+                body: formData
+            });
+            
+            const result = await response.json();
+            console.log(result);
+            
+            // In a real app, you'd poll for results or use WebSockets
+            document.getElementById('output-video').src = "/processed/your_video.mp4";
+        });
+    </script>
+</body>
+</html>
