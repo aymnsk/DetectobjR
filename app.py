@@ -1,5 +1,10 @@
-import streamlit as st
 import os
+os.environ['STREAMLIT_SERVER_PORT'] = '8501'
+os.environ['STREAMLIT_SERVER_HEADLESS'] = 'true'
+os.environ['STREAMLIT_SERVER_ENABLE_CORS'] = 'false'
+os.environ['STREAMLIT_SERVER_FILE_WATCHER'] = 'false'
+os.environ['STREAMLIT_GLOBAL_DEVELOPMENT_MODE'] = 'false'
+os.environ['STREAMLIT_GLOBAL_METRICS'] = 'false'import streamlit as st
 import tempfile
 from human_detector import detect_humans
 
