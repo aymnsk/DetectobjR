@@ -1,0 +1,57 @@
+name: Build and Deploy
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Install Dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y cmake libclang-dev clang pkg-config libopencv-dev
+
+    - name: Install Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        override: true
+
+    - name: Build
+      run: cargo build --release
+
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v2
+      with:
+        name: opencv-rust-detection
+        path: |
+          target/release/opencv-rust-detection
+          models/
+          static/
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Download Artifact
+      uses: actions/download-artifact@v2
+      with:
+        name: opencv-rust-detection
+
+    - name: Install flyctl
+      uses: superfly/flyctl-actions@1.1
+      with:
+        args: "version"
+
+    - name: Deploy to Fly.io
+      uses: superfly/flyctl-actions@1.1
+      with:
+        args: "deploy --remote-only"
+      env:
+        FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
